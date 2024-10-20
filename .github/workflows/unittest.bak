@@ -1,0 +1,98 @@
+name: Run Unit Tests
+
+on: [push, pull_request]
+
+jobs:
+  test-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: ['3.12']
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-xdist
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: "129"  # do not change
+          install-dependencies: true
+          install-chromedriver: true
+
+      - name: Start Chrome
+        shell: bash
+        run: |
+          /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+            --headless \
+            --remote-debugging-port=9222 \
+            --disable-gpu \
+            --no-sandbox \
+            --disable-dev-shm-usage \
+            --user-data-dir=$(pwd)/chrome_profile
+          
+          if pgrep "Google Chrome" > /dev/null; then
+            echo "Chrome successfully started."
+          else
+            echo "Failed to start Chrome."
+            exit 1
+          fi
+
+      - name: Set PYTHONPATH and test
+        shell: bash
+        run: |
+          export PYTHONPATH=${{ github.workspace }}:${{ github.workspace }}/src
+          pytest tests
+
+  test-windows:
+    runs-on: windows-2019
+    strategy:
+      matrix:
+        python-version: ['3.12']
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-xdist
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: "stable"  # do not change
+          install-chromedriver: true
+
+      - name: Start Chrome
+        shell: pwsh
+        run: |
+          Start-Process "C:\Program Files\Google\Chrome\Application\chrome.exe" -ArgumentList "--remote-debugging-port=9222", "--user-data-dir=%cd%\chrome_profile", "--disable-infobars", "--disable-extensions", "--start-maximized"
+          $chromeProcess = Get-Process -Name chrome -ErrorAction SilentlyContinue
+          if ($chromeProcess) {
+            Write-Output "Chrome successfully started."
+          } else {
+            Write-Error "Failed to start Chrome."
+          }
+
+      - name: Set PYTHONPATH and test
+        shell: pwsh
+        run: |
+          $env:PYTHONPATH = "${{ github.workspace }};${{ github.workspace }}\src"
+          pytest tests

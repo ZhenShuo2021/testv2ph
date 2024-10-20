@@ -1,0 +1,6 @@
+colorama
+python-dotenv
+requests
+selenium
+setuptools
+lxml
