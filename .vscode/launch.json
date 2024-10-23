@@ -13,7 +13,10 @@
             },
             "envFile": "${workspaceFolder}/.env",
             "args": [
-                "https://www.v2ph.com/album/Weekly-Big-Comic-Spirits-2016-No22-23"
+                "--bot",
+                "selenium",
+                "--terminate",
+                "https://www.v2ph.com/album/zoe87m4z.html?page=9"
             ]
         }
     ]

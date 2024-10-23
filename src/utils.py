@@ -1,3 +1,4 @@
+import argparse
 import logging
 import re
 import requests
@@ -7,75 +8,152 @@ from pathlib import Path
 from lxml import html
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
-from .const import HEADERS, RATE_LIMIT
+from .const import HEADERS
 
 
-def parse_content(html_content: str, logger: logging.Logger) -> html.HtmlElement | None:
-    if "Failed" in html_content:
-        return None
+class LinkParser:
+    """Tool class parses URL"""
 
-    try:
-        return html.fromstring(html_content)
-    except Exception as e:
-        logger.error(f"Error parsing HTML content: {e}")
-        return None
+    @staticmethod
+    def parse_input_url(url):
+        parsed_url = urlparse(url)
+        path_parts: list[str] = parsed_url.path.split("/")
+        query_params = parse_qs(parsed_url.query)
+        start_page: int = int(query_params.get("page", [1])[0])  # default page=1
+        return path_parts, start_page
+
+    @staticmethod
+    def parse_html(html_content: str, logger: logging.Logger) -> html.HtmlElement | None:
+        if "Failed" in html_content:
+            return None
+
+        try:
+            return html.fromstring(html_content)
+        except Exception as e:
+            logger.error(f"Error parsing HTML content: {e}")
+            return None
+
+    @staticmethod
+    def get_max_page(tree: html.HtmlElement) -> int:
+        """Parse pagination count"""
+        page_links = tree.xpath(
+            '//li[@class="page-item"]/a[@class="page-link" and string-length(text()) <= 2]/@href'
+        )
+
+        if not page_links:
+            return 1
+
+        page_numbers = []
+        for link in page_links:
+            match = re.search(r"page=(\d+)", link)
+            if match:
+                page_number = int(match.group(1))
+            else:
+                page_number = 1
+            page_numbers.append(page_number)
+
+        return max(page_numbers)
+
+    @staticmethod
+    def add_page_num(url: str, page: int) -> str:
+        parsed_url = urlparse(url)  # 解析 URL
+        query_params = parse_qs(parsed_url.query)  # 解析查詢參數
+        query_params["page"] = [str(page)]  # 修改頁碼
+
+        new_query = urlencode(query_params, doseq=True)  # 組合成字串
+        new_url = parsed_url._replace(query=new_query)  # 替換頁碼
+
+        # Example
+        # url = "https://example.com/search?q=test&sort=asc", page = 3
+        # parsed_url: ParseResult(scheme='https', netloc='example.com', path='/search', params='', query='q=test&sort=asc', fragment='')
+        # query_params: {'q': ['test'], 'sort': ['asc'], 'page': ['3']}
+        # new_query: 'q=test&sort=asc&page=3'
+        # new_url: ParseResult(scheme='https', netloc='example.com', path='/search', params='', query='q=test&sort=asc&page=3', fragment='')
+        # urlunparse: 'https://example.com/search?q=test&sort=asc&page=3'
+        return urlunparse(new_url)
+
+    @staticmethod
+    def remove_page_num(url: str) -> str:
+        """remove ?page=d or &page=d from URL"""
+        # Parse the URL
+        parsed_url = urlparse(url)
+        query_params = parse_qs(parsed_url.query)
+
+        # Remove the 'page' parameter if it exists
+        if "page" in query_params:
+            del query_params["page"]
+
+        # Rebuild the query string without 'page'
+        new_query = urlencode(query_params, doseq=True)
+
+        # Rebuild the full URL
+        new_url = urlunparse(parsed_url._replace(query=new_query))
+        return new_url
 
 
-def parse_max_page(tree: html.HtmlElement) -> int:
-    """Parse pagination count"""
-    page_links = tree.xpath(
-        '//li[@class="page-item"]/a[@class="page-link" and string-length(text()) <= 2]/@href'
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Web scraper for albums and images.")
+    parser.add_argument("url", help="URL to scrape")
+    parser.add_argument(
+        "--bot",
+        dest="bot_type",
+        default="drission",
+        type=str,
+        choices=["selenium", "drission"],
+        required=False,
+        help="Type of bot to use (default: drission)",
     )
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-q", "--quiet", action="store_true", help="Quiet mode")
+    group.add_argument("-v", "--verbose", action="store_true", help="Verbose mode")
+    group.add_argument(
+        "--log-level", default=None, type=int, choices=range(1, 6), help="Set log level (1~5)"
+    )
+    parser.add_argument("--dry-run", action="store_true", help="Dry run without downloading")
+    parser.add_argument("--terminate", action="store_true", help="Terminate chrome after scraping")
+    args = parser.parse_args()
 
-    if not page_links:
-        return 1
+    if args.quiet:
+        log_level = logging.ERROR
+    elif args.verbose:
+        log_level = logging.DEBUG
+    elif args.log_level is not None:
+        log_level_mapping = {
+            1: logging.DEBUG,
+            2: logging.INFO,
+            3: logging.WARNING,
+            4: logging.WARNING,
+            5: logging.CRITICAL,
+        }
+        log_level = log_level_mapping[args.verbose]
+    else:
+        log_level = logging.INFO
 
-    page_numbers = []
-    for link in page_links:
-        match = re.search(r"page=(\d+)", link)
-        if match:
-            page_number = int(match.group(1))
-        else:
-            page_number = 1
-        page_numbers.append(page_number)
-
-    return max(page_numbers)
-
-
-def get_full_url(url: str, page: int) -> str:
-    parsed_url = urlparse(url)
-    query_params = parse_qs(parsed_url.query)
-    query_params["page"] = [str(page)]
-
-    new_query = urlencode(query_params, doseq=True)
-    new_url = parsed_url._replace(query=new_query)
-    return urlunparse(new_url)  #'https://www.v2ph.com/album/YTY-7173?page=1'
-
-
-def remove_page_param(url: str) -> str:
-    """remove ?page=d or &page=d from URL"""
-    # Parse the URL
-    parsed_url = urlparse(url)
-    query_params = parse_qs(parsed_url.query)
-
-    # Remove the 'page' parameter if it exists
-    if "page" in query_params:
-        del query_params["page"]
-
-    # Rebuild the query string without 'page'
-    new_query = urlencode(query_params, doseq=True)
-
-    # Rebuild the full URL
-    new_url = urlunparse(parsed_url._replace(query=new_query))
-    return new_url
+    return args, log_level
 
 
-def download_images(album_name, image_links, destination, logger):
+def download_album(
+    album_name: str,
+    image_links: str,
+    destination: str,
+    rate_limit: int,
+    logger: logging.Logger,
+):
+    """
+    Download images from image links, save them to a folder named after the album, and skips files
+    that already exist.
+
+    Args:
+        album_name (str): Name of album folder.
+        image_links (str): List of tuples with image URLs and corresponding alt text for filenames.
+        destination (str): Download parent directory of album folder.
+        rate_limit (int): Download rate limits.
+        logger (logging.Logger): Logger.
+    """
     folder = destination / Path(album_name)
     folder.mkdir(parents=True, exist_ok=True)
 
     for url, alt in image_links:
-        print(alt)
         filename = re.sub(r'[<>:"/\\|?*]', "", alt)  # Remove invalid characters
         file_path = folder / f"{filename}.jpg"
 
@@ -84,18 +162,18 @@ def download_images(album_name, image_links, destination, logger):
             continue
 
         # requests module will log download url
-        if download_file(url, file_path, logger):
+        if download_image(url, file_path, rate_limit, logger):
             pass
 
 
-def download_file(url: str, save_path: Path, logger: logging.Logger) -> bool:
+def download_image(url: str, save_path: Path, rate_limit: int, logger: logging.Logger) -> bool:
     """
     Error control subfunction for download files.
 
     Return `True` for successful download, else `False`.
     """
     try:
-        download_with_speed_limit(url, save_path, RATE_LIMIT)
+        download(url, save_path, rate_limit)
         logger.info(f"Downloaded: '{save_path}'")
         return True
     except requests.exceptions.HTTPError as http_err:
@@ -106,7 +184,7 @@ def download_file(url: str, save_path: Path, logger: logging.Logger) -> bool:
         return False
 
 
-def download_with_speed_limit(url: str, save_path: Path, speed_limit_kbps: int = 1536) -> None:
+def download(url: str, save_path: Path, speed_limit_kbps: int = 1536) -> None:
     """
     Download with speed limit function.
 

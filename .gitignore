@@ -2,9 +2,10 @@
 .DS_Store
 download*
 html/*
-chrome_profile/
-chromedriver
 *temp*
+chrome_profile*
+chromedriver
+profile
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

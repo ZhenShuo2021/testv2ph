@@ -2,18 +2,20 @@
 微圖坊下載器
 
 ## 使用方式
-需要安裝 Chrome
+### 前置需求
+1. 安裝 Chrome 瀏覽器
+2. Python 版本 > 3.10
 
-第一次使用時開啟終端，輸入以下指令啟動 Chrome 並登入微圖坊帳號
+<!-- 第一次使用時開啟終端，輸入以下指令啟動 Chrome 並登入微圖坊帳號
 ```sh
 # MacOS
 /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222 --user-data-dir="./chrome_profile" --disable-infobars --disable-extensions --start-maximized
 
 # Windows
 start chrome -ArgumentList "--remote-debugging-port=9222", "--user-data-dir=%cd%\chrome_profile", "--disable-infobars", "--disable-extensions", "--start-maximized"
-```
+``` -->
 
-安裝 Python 依賴套件
+3. 安裝 Python 依賴套件
 ```sh
 git clone -q https://github.com/ZhenShuo2021/V2PH-Downloader  # 或是直接下載 repo
 cd V2PH-Downloader                           # 進入資料夾
@@ -22,40 +24,30 @@ source .venv/bin/activate                    # Windows指令: .venv\Scripts\acti
 pip install -r requirements.txt              # 安裝依賴套件
 ```
 
-前置作業完成後就可以直接執行腳本
+完成前置作業後即可執行腳本，首次執行時需要手動登入網站。在 `.env` 檔案中填入帳號密碼腳本會自動登入，但可能會遇到機器人驗證的問題。
 ```sh
-python -m src.main <url> <--dry-run>
+python run.py <url>
 ```
 
-參數
-- url: 目標下載的頁面網址。
-- --dry-run: 可選參數，僅進行模擬下載，不會實際下載檔案。
-- --terminate: 下載結束後是否關閉 Chrome 視窗。
+### 參數
+- url: 下載目標的網址。
+- --bot: 選擇自動化工具。完全體感不負責任分析 drission 比較不會遇到 Cloudflare 封鎖。
+- --dry-run: 僅進行模擬下載，不會實際下載檔案。
+- --terminate: 程式結束後是否關閉 Chrome 視窗。
+- -q: 安靜模式。
+- -v: 偵錯模式。
+- --verbose: 設定日誌顯示等級，數值為 1~5 之間。
 
 ## 設定
-在 src/const.py 中可以調整設定，例如捲動長度、捲動步長與速率限制等：
+在 `config.yaml` 中可以調整設定，例如捲動長度、捲動步長與速率限制等：
 
-```py
-MIN_SCROLL_LENGTH = 1500
-MAX_SCROLL_LENGTH = 4000
-MIN_SCROLL_STEP = 50
-MAX_SCROLL_STEP = 250
-RATE_LIMIT = 400
-DOWNLOAD_DIR = "download"
-PROFILE_PATH = "chrome_profile"
-ALBUM_LOG_FILE = "downloaded_albums.txt"
-LOG_PATH = "./v2ph"
-```
-
-- DOWNLOAD_DIR: 預設下載在專案資料夾中的 download 內
-- RATE_LIMIT: 下載速度限制，400就很夠用
-- ALBUM_LOG_FILE: 紀錄 album 網址，重複的會跳過
-- LOG_PATH: 運行日誌
+- download_dir: 預設下載在專案資料夾中的 download 內。
+- rate_limit: 下載速度限制，預設 400 夠用也不會被封鎖。
+- album_log: 紀錄下載過的 album 頁面網址，重複的會跳過。
+- log_dir: 設定程式執行日誌的位置。
 
 ## 補充
 1. 這不是破解腳本，只是下載工具，該有的限制還是有。
-2. 換頁或者下載速度設定太快可能會吃到 Cloudflare 封鎖，請小心。
+2. 換頁或者下載速度設定太快可能會觸發 Cloudflare 封鎖，請小心。
 3. 請謹慎使用，不要又把好網站搞到關掉了，難得有資源收錄完整的。
-
-## Todo
-[突破 Cloudflare turnstile](https://github.com/g1879/DrissionPage/issues/297)，自動登入腳本都寫好了就差被擋住。
+4. 從頁面中間開始下載不會被視作重複下載，以方便補齊缺失檔案。

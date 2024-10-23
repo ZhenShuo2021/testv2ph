@@ -2,7 +2,6 @@
 import logging
 import os
 from colorama import Fore, Style, init
-from .const import LOG_PATH
 
 init()
 
@@ -36,7 +35,7 @@ class CustomFormatter(logging.Formatter):
             return f"[{self.formatTime(record, '%H:%M:%S')}][{levelname}] - {record.getMessage()}"
 
 
-def setup_logging(level, no_archive=False):
+def setup_logging(level, log_path, no_archive=False):
     """
     level: [logging.LOGLEVEL]
     args: [bool], no_archive
@@ -56,9 +55,9 @@ def setup_logging(level, no_archive=False):
 
     # File handler
     if not no_archive:
-        log_dir = os.path.dirname(LOG_PATH)
+        log_dir = os.path.dirname(log_path)
         os.makedirs(log_dir, exist_ok=True)
-        file_handler = logging.FileHandler(LOG_PATH + ".log", encoding="utf-8")
+        file_handler = logging.FileHandler(log_path + ".log", encoding="utf-8")
         file_handler.setFormatter(plain_formatter)
         logging.getLogger().addHandler(file_handler)
 
@@ -68,7 +67,7 @@ def setup_logging(level, no_archive=False):
 
 if __name__ == "__main__":
     # Set up logging
-    setup_logging(logging.DEBUG)
+    setup_logging(logging.DEBUG, "test_logger.log")
 
     # Create a logger
     logger = logging.getLogger(__name__)
