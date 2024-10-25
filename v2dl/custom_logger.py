@@ -57,7 +57,7 @@ def setup_logging(level, log_path, no_archive=False):
     if not no_archive:
         log_dir = os.path.dirname(log_path)
         os.makedirs(log_dir, exist_ok=True)
-        file_handler = logging.FileHandler(log_path + ".log", encoding="utf-8")
+        file_handler = logging.FileHandler(log_path, encoding="utf-8")
         file_handler.setFormatter(plain_formatter)
         logging.getLogger().addHandler(file_handler)
 

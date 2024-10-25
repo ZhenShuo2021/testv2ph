@@ -1,7 +1,32 @@
+# ============== Default User Preference ==============
+DEFAULT_CONFIG = {
+    "download": {
+        "min_scroll_length": 500,
+        "max_scroll_length": 1000,
+        "min_scroll_step": 50,
+        "max_scroll_step": 250,
+        "rate_limit": 400,
+        "download_dir": "v2dl",
+    },
+    "paths": {
+        "download_log": "downloaded_albums.txt",
+        "system_log": "v2dl.log",
+    },
+    "chrome": {
+        "profile_path": "v2dl_chrome_profile",
+        "exec_path": {
+            "Linux": "/usr/bin/google-chrome",
+            "Darwin": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "Windows": r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        },
+    },
+}
+
+
 # ============== System ==============
 BASE_URL = "https://www.v2ph.com"
 DEMO_URL_ALBUM = "https://www.v2ph.com/album/Weekly-Young-Jump-2015-No15"
-DEMO_URL_ACTOR = "https://www.v2ph.com/actor/Mao-Imaizumi"
+DEMO_URL_ALBUM_LIST = "https://www.v2ph.com/category/nogizaka46"
 WORKFLOW_URL_ACTOR = (
     "https://www.v2ph.com/album/Weekly-Big-Comic-Spirits-2016-No22-23"  # only 1 page
 )

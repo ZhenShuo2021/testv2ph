@@ -18,7 +18,7 @@ class DrissionBot(BaseBot):
         self.cloudflare = DriCloudflareHandler(self.page, self.logger)
 
     def init_driver(self):
-        user_data_dir = self.config.paths.profile
+        user_data_dir = self.config.chrome.profile_path
         if not os.path.exists(user_data_dir):
             os.makedirs(user_data_dir)
             self.new_profile = True
@@ -124,6 +124,10 @@ class DrissionBot(BaseBot):
         if "用戶登錄" in self.page.html:
             self.logger.info("Login page detected - Starting login process")
             try:
+                if self.email is None or self.password is None:
+                    self.logger.critical("Email and password not provided")
+                    sys.exit("Automated login failed.")
+
                 # self.handle_cloudflare_recaptcha()
 
                 BaseBehavior.random_sleep(0.1, 0.3)

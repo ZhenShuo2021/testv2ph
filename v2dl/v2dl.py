@@ -7,11 +7,11 @@ from queue import Queue
 
 from lxml import html
 
-from .web_bot.get import get_bot
 from .const import BASE_URL, XPATH_ALTS, XPATH_ALBUM, XPATH_ALBUM_LIST
-from .config import Config, load_config
+from .config import Config, ConfigManager, parse_arguments
 from .custom_logger import setup_logging
-from .utils import LinkParser, download_album, parse_arguments
+from .utils import LinkParser, download_album
+from .web_bot import get_bot
 
 
 class ScrapeManager:
@@ -36,7 +36,7 @@ class ScrapeManager:
         # 初始化
         self.download_service = DownloadService(config, logger)
         self.link_scraper = LinkScraper(web_bot, dry_run, self.download_service, logger)
-        self.album_tracker = AlbumTracker(config.paths.album_log)
+        self.album_tracker = AlbumTracker(config.paths.download_log)
 
         if not dry_run:
             self.download_service.start_workers()
@@ -180,7 +180,7 @@ class LinkScraper:
         if not self.dry_run:
             album_name = self.extract_album_name(alts)
             image_links = list(zip(page_links, alts))
-            self.download_service.download_queue.put((album_name, image_links))  # add task to queue
+            self.download_service.add_download_task(album_name, image_links)  # add task to queue
         self.logger.info(f"Found {len(page_links)} images on page {page}")
 
     @staticmethod
@@ -197,8 +197,8 @@ class LinkScraper:
 class AlbumTracker:
     """Download log in units of albums"""
 
-    def __init__(self, album_log_path: str):
-        self.album_log_path = album_log_path
+    def __init__(self, download_log: str):
+        self.album_log_path = download_log
 
     def is_downloaded(self, album_url: str) -> bool:
         if os.path.exists(self.album_log_path):
@@ -217,11 +217,11 @@ class AlbumTracker:
 class DownloadService:
     """Initialize multiple threads with a queue for downloading."""
 
-    def __init__(self, config: Config, logger: logging.Logger, num_workers: int = 2):
+    def __init__(self, config: Config, logger: logging.Logger, num_workers: int = 1):
         self.download_queue = Queue()
         self.config = config
         self.logger = logger
-        self.num_workers = num_workers
+        self.num_workers = num_workers  # one worker is enough, too many workers would be blocked
         self.worker_threads = []
 
     def start_workers(self):
@@ -233,13 +233,13 @@ class DownloadService:
 
     def _download_worker(self):
         """Worker function to process downloads from the queue"""
-        dir = self.config.download.download_dir
+        dest = self.config.download.download_dir
         rate = self.config.download.rate_limit
         while True:  # run until receiving exit signal
             album_name, page_image_links = self.download_queue.get()  # get job from queue
             if album_name is None:
                 break  # exit signal received
-            download_album(album_name, page_image_links, dir, rate, self.logger)
+            download_album(album_name, page_image_links, dest, rate, self.logger)
             self.download_queue.task_done()
 
     def add_download_task(self, album_name: str, image_links: list[tuple[str, str]]):
@@ -273,14 +273,10 @@ class DownloadError(Exception):
 
 def main():
     args, log_level = parse_arguments()
-    config = load_config("config.yaml")
-    setup_logging(log_level, log_path=config.paths.log_dir)
+    config = ConfigManager().load()
+    setup_logging(log_level, log_path=config.paths.system_log)
     logger = logging.getLogger(__name__)
 
     web_bot = get_bot(args.bot_type, config, args.terminate, logger)
     scraper = ScrapeManager(args.url, web_bot, args.dry_run, config, logger)
     scraper.start_scraping()
-
-
-if __name__ == "__main__":
-    main()

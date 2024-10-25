@@ -1,9 +1,10 @@
 # Custom
 .DS_Store
+.vscode
 download*
 html/*
 *temp*
-chrome_profile*
+v2dl_chrome_profile*
 chromedriver
 profile
 

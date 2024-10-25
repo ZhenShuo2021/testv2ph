@@ -36,56 +36,46 @@ class SeleniumBot(BaseBot):
         self.chrome_process: Popen
         options = Options()
 
-        user_data_dir = self.config.paths.profile
+        user_data_dir = self.config.chrome.profile_path
         if not os.path.exists(user_data_dir):
             os.makedirs(user_data_dir)
             self.new_profile = True
         else:
             self.new_profile = False
 
-        chrome_path = self.config.get_chrome_path()
+        chrome_path = self.config.chrome.exec_path
         subprocess_cmd = [
             chrome_path,
             "--remote-debugging-port=9222",
             f"--user-data-dir={user_data_dir}",
+            SELENIUM_AGENT,
+            "--disable-gpu",
             "--disable-infobars",
             "--disable-extensions",
+            "--disable-dev-shm-usage",
+            "--disable-blink-features",
+            "--disable-blink-features=AutomationControlled",
             "--start-maximized",
+            "--ignore-certificate-errors",
         ]
         self.chrome_process = subprocess.Popen(subprocess_cmd)
 
-        options.add_argument(SELENIUM_AGENT)
-        options.add_argument(f"--user-data-dir={user_data_dir}")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--ignore-certificate-errors")
-        options.add_argument("--disable-extensions")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--disable-infobars")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-blink-features")
-        options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
-
         try:
-            chromedriver_path = os.environ.get("CHROMEDRIVER_PATH")
-            service = (
-                Service(chromedriver_path)
-                if chromedriver_path and os.path.exists(chromedriver_path)
-                else Service()
-            )
-            self.driver = webdriver.Chrome(service=service, options=options)
+            self.driver = webdriver.Chrome(service=Service(), options=options)
         except Exception as e:
             self.logger.critical(f"無法啟動 Selenium WebDriver: {e}")
             sys.exit("無法啟動 Selenium WebDriver")
 
         # width = random.randint(1024, 1920)
         # height = random.randint(768, 1080)
-        self.driver.set_window_size(1920, 1080)
+        # self.driver.set_window_size(1920, 1080)
 
     def close_driver(self):
-        if self.close_browser:
-            self.driver.quit()
-            self.chrome_process.terminate()
+        pass
+        # if self.close_browser:
+        #     self.driver.quit()
+        #     self.chrome_process.terminate()
 
     def auto_page_scroll(
         self, url: str, max_retry: int = 3, page_sleep: int = 5, fast_scroll: bool = False
@@ -173,6 +163,10 @@ class SeleniumBot(BaseBot):
         if "用戶登錄" in self.driver.page_source:
             self.logger.info("Login page detected - Starting login process")
             try:
+                if self.email is None or self.password is None:
+                    self.logger.critical("Email and password not provided")
+                    sys.exit("Automated login failed.")
+
                 email_field = WebDriverWait(self.driver, 10).until(
                     EC.presence_of_element_located((By.ID, "email"))
                 )

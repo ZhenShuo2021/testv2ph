@@ -2,7 +2,6 @@ import os
 import random
 import time
 from abc import ABC, abstractmethod
-from dotenv import load_dotenv
 from typing import Any
 
 
@@ -13,9 +12,8 @@ class BaseBot(ABC):
         self.config = config
         self.close_browser = close_browser
         self.logger = logger
-        load_dotenv()
-        self.email = os.getenv("USERNAME")
-        self.password = os.getenv("PASSWORD")
+        self.email = os.getenv("V2PH_USERNAME")
+        self.password = os.getenv("V2PH_PASSWORD")
 
         self.new_profile = False
 

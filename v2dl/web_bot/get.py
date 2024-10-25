@@ -29,4 +29,4 @@ def init_new_profile(bot):
         elif isinstance(bot, SeleniumBot):
             bot.driver.get(url)
 
-    time.sleep(3)
+        time.sleep(4)

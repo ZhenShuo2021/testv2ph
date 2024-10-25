@@ -1,4 +1,3 @@
-import argparse
 import logging
 import re
 import requests
@@ -91,47 +90,6 @@ class LinkParser:
         return new_url
 
 
-def parse_arguments():
-    parser = argparse.ArgumentParser(description="Web scraper for albums and images.")
-    parser.add_argument("url", help="URL to scrape")
-    parser.add_argument(
-        "--bot",
-        dest="bot_type",
-        default="drission",
-        type=str,
-        choices=["selenium", "drission"],
-        required=False,
-        help="Type of bot to use (default: drission)",
-    )
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument("-q", "--quiet", action="store_true", help="Quiet mode")
-    group.add_argument("-v", "--verbose", action="store_true", help="Verbose mode")
-    group.add_argument(
-        "--log-level", default=None, type=int, choices=range(1, 6), help="Set log level (1~5)"
-    )
-    parser.add_argument("--dry-run", action="store_true", help="Dry run without downloading")
-    parser.add_argument("--terminate", action="store_true", help="Terminate chrome after scraping")
-    args = parser.parse_args()
-
-    if args.quiet:
-        log_level = logging.ERROR
-    elif args.verbose:
-        log_level = logging.DEBUG
-    elif args.log_level is not None:
-        log_level_mapping = {
-            1: logging.DEBUG,
-            2: logging.INFO,
-            3: logging.WARNING,
-            4: logging.WARNING,
-            5: logging.CRITICAL,
-        }
-        log_level = log_level_mapping[args.verbose]
-    else:
-        log_level = logging.INFO
-
-    return args, log_level
-
-
 def download_album(
     album_name: str,
     image_links: str,
@@ -191,7 +149,7 @@ def download(url: str, save_path: Path, speed_limit_kbps: int = 1536) -> None:
     Default speed limit is 1536 KBps (1.5 MBps).
     """
 
-    chunk_size = 1024  # 1 KB
+    chunk_size = 1024
     speed_limit_bps = speed_limit_kbps * 1024  # 轉換為 bytes per second
 
     response = requests.get(url, stream=True, headers=HEADERS)

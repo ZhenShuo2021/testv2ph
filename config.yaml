@@ -1,18 +1,18 @@
 download:
-  min_scroll_length: 500
+  min_scroll_length: 200
   max_scroll_length: 1000
-  min_scroll_step: 50
-  max_scroll_step: 250
+  min_scroll_step: 30
+  max_scroll_step: 80
   rate_limit: 400
   download_dir: "download"
 
 paths:
-  profile: "chrome_profile_dev"
-  album_log: "downloaded_albums.txt"
-  log_dir: "./v2ph"
+  download_log: "downloaded_albums.txt"
+  system_log: "v2ph.log"
 
 chrome:
-  paths:
+  profile_path: "v2dl_chrome_profile"
+  exec_path:
     Linux: "/usr/bin/google-chrome"
     Darwin: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-    Windows: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+    Windows: r"C:\Program Files\\Google\\Chrome\\Application\\chrome.exe"
