@@ -13,13 +13,13 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-colorama = "^0.4.6"
-DrissionPage = "4.1.0.9"
-python-dotenv = "^1.0.1"
-requests = "^2.32.0"
-selenium = "^4.25.0"
-lxml = "^5.3.0"
-PyYAML = "^6.0.0"
+colorama = "*"
+DrissionPage = "^4.1"
+python-dotenv = "*"
+requests = "*"
+selenium = "*"
+lxml = "*"
+PyYAML = "*"
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.17.4"
